@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2
+
+- Fixed the cases grid height so saved case rows remain visible in the cases tab.
+
 ## 1.0.1
 
 - Fixed the case list being squeezed out by the inline stage-history grid.
