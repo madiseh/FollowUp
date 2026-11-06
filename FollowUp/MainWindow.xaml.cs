@@ -21,7 +21,7 @@ public partial class MainWindow : Window
         var menu=new Forms.ContextMenuStrip(); menu.Items.Add("بازکردن فالوآپ",null,(_,_)=>Dispatcher.Invoke(ShowApp));
         menu.Items.Add("خروج کامل",null,(_,_)=>Dispatcher.Invoke(ExitApp));
         using var iconStream=Application.GetResourceStream(new Uri("pack://application:,,,/FollowUp;component/Assets/FollowUp.ico")).Stream;
-        tray=new Forms.NotifyIcon { Text="فالوآپ — نسخه ۱.۰.۰",Icon=new System.Drawing.Icon(iconStream),Visible=true,ContextMenuStrip=menu };
+        tray=new Forms.NotifyIcon { Text="فالوآپ — نسخه ۱.۰.۱",Icon=new System.Drawing.Icon(iconStream),Visible=true,ContextMenuStrip=menu };
         tray.DoubleClick+=(_,_)=>Dispatcher.Invoke(ShowApp);
         tray.BalloonTipClicked+=(_,_)=>Dispatcher.Invoke(ShowApp);
         Closing+=OnClosing;
@@ -78,13 +78,23 @@ public partial class MainWindow : Window
         var period=form.Text("سال / دورهٔ شمسی",x?.Period??""); var number=form.Text("شماره / کلاسهٔ پرونده",x?.FileNumber??"");
         ComboBox? stage=x==null?form.Choice("مرحلهٔ شروع",Workflow.Stages,Workflow.Stages[0]):null;
         var owner=form.Text("مسئول پیگیری",x?.Owner??""); var notes=form.Text("توضیحات",x?.Notes??"",true);
+        long savedId=0;
         form.OnSave=()=>{
             var record=new TaxCase { Id=x?.Id??0,CompanyId=(company.SelectedItem as Company)?.Id??0,Title=title.Text,Subject=subject.Text,Period=period.Text,FileNumber=number.Text,Stage=stage?.SelectedItem as string??x?.Stage??Workflow.Stages[0],Owner=owner.Text,Notes=notes.Text };
-            var id=db.SaveCase(record); if(x==null) db.RecordStage(id,record.Stage,DateTime.Today,"ثبت اولیهٔ پرونده");
+            savedId=db.SaveCase(record); if(x==null) db.RecordStage(savedId,record.Stage,DateTime.Today,"ثبت اولیهٔ پرونده");
         };
-        if(form.ShowDialog()==true) { Refresh(); Pages.SelectedIndex=1; }
+        if(form.ShowDialog()==true) { Refresh(); Pages.SelectedIndex=1; CasesGrid.SelectedItem=db.Cases().FirstOrDefault(c=>c.Id==savedId); }
     }
-    private void Case_SelectionChanged(object sender,SelectionChangedEventArgs e) { HistoryGrid.ItemsSource=CasesGrid.SelectedItem is TaxCase x?db.History(x.Id):null; }
+    private void History_Click(object sender,RoutedEventArgs e) => Guard(()=>{
+        var x=Selected<TaxCase>(CasesGrid);
+        var history=new DataGrid { Margin=new Thickness(20),MinHeight=220 };
+        history.Columns.Add(new DataGridTextColumn { Header="تاریخ شمسی",Binding=new System.Windows.Data.Binding("DateText"),Width=140 });
+        history.Columns.Add(new DataGridTextColumn { Header="مرحله",Binding=new System.Windows.Data.Binding("Stage"),Width=210 });
+        history.Columns.Add(new DataGridTextColumn { Header="نتیجه / توضیحات",Binding=new System.Windows.Data.Binding("Notes"),Width=new DataGridLength(1,DataGridLengthUnitType.Star) });
+        history.ItemsSource=db.History(x.Id);
+        var window=new Window { Owner=this,Title="سوابق مراحل — "+x.Title,Width=760,Height=430,MinWidth=600,MinHeight=300,WindowStartupLocation=WindowStartupLocation.CenterOwner,FlowDirection=FlowDirection.LeftToRight,Style=(Style)FindResource(typeof(Window)),Content=history };
+        window.ShowDialog();
+    });
     private void Stage_Click(object sender,RoutedEventArgs e) => Guard(()=>{
         var x=Selected<TaxCase>(CasesGrid);
         var form=new EditorWindow(this,"ثبت مرحله و نتیجه",x.Display+"\nمراحل پیشین حفظ می‌شوند. برای بستن پرونده، «بسته‌شده» را انتخاب کنید.");

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- Fixed the case list being squeezed out by the inline stage-history grid.
+- Moved stage history into its own window and selected a case immediately after saving it.
+
 ## 1.0.0
 
 - Initial Windows WPF release with a local SQLite database.
